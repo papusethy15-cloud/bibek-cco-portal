@@ -15,6 +15,7 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { getWsBase } from '../utils/wsBase';
 
 export type WSStatus = 'connecting' | 'connected' | 'disconnected';
 export type WSHandler = (payload: any, event: WSMessage) => void;
@@ -24,19 +25,6 @@ export interface WSMessage {
   room: string | null;
   payload: any;
   timestamp: string;
-}
-
-// ── URL builder (same logic as admin hook) ───────────────────────────────────
-function _getWsBase(): string {
-  const apiUrl = (import.meta as any).env?.VITE_API_URL as string | undefined
-    ?? 'http://localhost:8000/api/v1';
-  try {
-    const parsed = new URL(apiUrl);
-    const wsProto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${wsProto}//${parsed.host}`;
-  } catch {
-    return apiUrl.replace(/^https/, 'wss').replace(/^http/, 'ws').replace(/\/api\/v1.*$/, '');
-  }
 }
 
 // ── Module-level singleton for CCO assignments channel ───────────────────────
@@ -77,7 +65,7 @@ function _connect(token: string) {
   if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) return;
   _intentionalClose = false;
   _notifyStatus('connecting');
-  const url = `${_getWsBase()}/ws/admin/assignments?token=${token}`;
+  const url = `${getWsBase()}/ws/admin/assignments?token=${token}`;
   _ws = new WebSocket(url);
 
   _ws.onopen = () => {
@@ -161,7 +149,7 @@ export function useBookingWebSocket(bookingId: string | null) {
 
   useEffect(() => {
     if (!bookingId || !token) return;
-    const url = `${_getWsBase()}/ws/booking/${bookingId}?token=${token}`;
+    const url = `${getWsBase()}/ws/booking/${bookingId}?token=${token}`;
 
     let backoff = 1000;
     let intentionalClose = false;
