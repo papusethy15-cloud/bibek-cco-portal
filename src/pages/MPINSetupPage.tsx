@@ -75,9 +75,18 @@ export function MPINSetupPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // If not logged in, redirect
+  // If not logged in → /login
+  // If MPIN already set in DB → skip setup, go to dashboard
   useEffect(() => {
-    if (!token) navigate('/login');
+    if (!token) { navigate('/login'); return; }
+    // Double-check backend in case localStorage is stale
+    authService.checkMpinStatus().then((isSet) => {
+      if (isSet) {
+        setMpinSet(true);
+        setMpinVerified(true);
+        navigate('/dashboard');
+      }
+    });
   }, [token]);
 
   const handleSetup = async () => {
@@ -157,7 +166,7 @@ export function MPINSetupPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Your MPIN is stored securely on this device. Keep it confidential.
+                  Your MPIN is stored securely in your account. It will be remembered even after signing out.
                 </p>
               </div>
             </>

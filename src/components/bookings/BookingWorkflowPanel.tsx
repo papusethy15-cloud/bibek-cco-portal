@@ -207,8 +207,12 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
 
   // Check if booking slot is breached (today's booking, active status, slot start > 30min ago)
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    if (initBooking.scheduled_date !== today) { setSlotOverdue(false); return; }
+    // Use local (IST) date — toISOString() gives UTC and is wrong after 18:30 IST
+    const _n = new Date();
+    const today = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}`;
+    // Normalise scheduled_date (may come as "2026-07-10T00:00:00" from some responses)
+    const schedDate = (initBooking.scheduled_date || '').split('T')[0];
+    if (schedDate !== today) { setSlotOverdue(false); return; }
     if (!['PENDING','CONFIRMED','ASSIGNED','ACCEPTED'].includes(initBooking.status)) { setSlotOverdue(false); return; }
     if (!initBooking.scheduled_slot) { setSlotOverdue(false); return; }
     const [h, m] = initBooking.scheduled_slot.split(':').map(Number);
@@ -1899,7 +1903,7 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
             {payMethod === 'PAY_LATER' && (
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Collection Date *</label>
-                <input type="date" min={new Date().toISOString().split('T')[0]}
+                <input type="date" min={(() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })()}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4FD8]"
                   value={payDue} onChange={e => setPayDue(e.target.value)} />
               </div>

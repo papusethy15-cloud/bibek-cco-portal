@@ -109,7 +109,10 @@ export function PaymentsPage() {
 
   const loadCollectedStats = async () => {
     try {
-      const res = await paymentService.listAll({ status: 'SUCCESS', per_page: '200' });
+      // Fetch up to 100 successful payments for stats (backend max is 100 per page).
+      // Stats only need recent data; date_from = 30 days ago keeps the response small.
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const res = await paymentService.listAll({ status: 'SUCCESS', per_page: '100', date_from: thirtyDaysAgo });
       const items = res.items || [];
       setAllSuccessful(items);
       const today = new Date().toISOString().split('T')[0];

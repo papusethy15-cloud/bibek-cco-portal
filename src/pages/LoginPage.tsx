@@ -28,9 +28,16 @@ export function LoginPage() {
       // Save both tokens and stamp the 24h session window
       setAuth(res.user, res.access_token, res.refresh_token);
       authService.stampSession();
-      setMpinSet(res.mpin_set || authService.isMpinSet());
 
-      if (!authService.isMpinSet()) {
+      // res.mpin_set comes directly from the backend (checks DB).
+      // Also sync the localStorage cache so isMpinSet() is consistent.
+      const mpinIsSet = res.mpin_set;
+      if (mpinIsSet) {
+        localStorage.setItem('cco_mpin_set', 'true');
+      }
+      setMpinSet(mpinIsSet);
+
+      if (!mpinIsSet) {
         navigate('/mpin-setup');
       } else {
         navigate('/dashboard');

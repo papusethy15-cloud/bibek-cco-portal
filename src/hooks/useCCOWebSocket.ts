@@ -1,16 +1,18 @@
 /**
  * useCCOWebSocket / useBookingWebSocket
  * ══════════════════════════════════════
- * Ported from admin_dashboard/src/hooks/useAdminWebSocket.ts
- *
  * useCCOWebSocket     → /ws/admin/assignments  (CCO role is allowed by backend)
  * useBookingWebSocket → /ws/booking/{bookingId}
  *
- * Features (identical to admin version):
+ * Key behaviours:
  *  • Singleton per page — one WS connection shared across all components
+ *  • Re-reads token from localStorage on EVERY reconnect attempt — so a
+ *    refreshed access token (after 401 refresh flow) is picked up automatically
  *  • Auto-reconnect with exponential back-off (1s → 2 → 4 → 8 → 16s max)
+ *  • Max 15 retries — stops spamming if backend is unreachable
  *  • Heartbeat PING every 30s
- *  • subscribe(eventType, handler) returns an unsubscribe function
+ *  • Console logs: [CCO WS] Connecting / Connected ✓ / Retrying / Max retries
+ *  • WS close code 4001 = expired token → reads fresh token immediately on next retry
  */
 
 import { useEffect, useCallback, useState } from 'react';
@@ -36,6 +38,9 @@ let _pingTimer: ReturnType<typeof setInterval> | null = null;
 let _backoff = 1000;
 let _intentionalClose = false;
 let _hookRefCount = 0;
+let _retryCount = 0;
+const _MAX_RETRIES = 15;
+let _disconnectTimer: ReturnType<typeof setTimeout> | null = null;  // StrictMode-safe deferred disconnect
 
 function _notifyStatus(s: WSStatus) {
   _statusListeners.forEach(fn => fn(s));
@@ -61,15 +66,37 @@ function _stopPing() {
   if (_pingTimer) { clearInterval(_pingTimer); _pingTimer = null; }
 }
 
-function _connect(token: string) {
+/**
+ * Always read the token fresh from localStorage — this ensures that when the
+ * HTTP layer silently refreshes the access token (api.ts interceptor on 401),
+ * the next WS reconnect picks up the new token automatically instead of
+ * retrying with the old expired one.
+ */
+function _getFreshToken(): string | null {
+  return localStorage.getItem('cco_token');
+}
+
+function _connect() {
+  // Cancel any pending scheduled disconnect (handles React StrictMode double-mount)
+  if (_disconnectTimer) { clearTimeout(_disconnectTimer); _disconnectTimer = null; }
   if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) return;
+
+  const token = _getFreshToken();
+  if (!token) {
+    console.warn('[CCO WS] No token in localStorage — skipping connect');
+    return;
+  }
+
   _intentionalClose = false;
   _notifyStatus('connecting');
   const url = `${getWsBase()}/ws/admin/assignments?token=${token}`;
+  console.log(`[CCO WS] Connecting (attempt ${_retryCount + 1}) → ${getWsBase()}/ws/admin/assignments`);
   _ws = new WebSocket(url);
 
   _ws.onopen = () => {
     _backoff = 1000;
+    _retryCount = 0;
+    console.log('[CCO WS] Connected ✓');
     _notifyStatus('connected');
     _startPing();
   };
@@ -82,20 +109,44 @@ function _connect(token: string) {
     } catch {}
   };
 
-  _ws.onclose = () => {
+  _ws.onclose = (e) => {
     _stopPing();
-    if (_intentionalClose) { _notifyStatus('disconnected'); return; }
+    if (_intentionalClose) {
+      console.log('[CCO WS] Disconnected (intentional)');
+      _notifyStatus('disconnected');
+      return;
+    }
+
     _notifyStatus('disconnected');
-    const delay = Math.min(_backoff, 16_000);
-    _backoff = Math.min(_backoff * 2, 16_000);
-    _reconnectTimer = setTimeout(() => _connect(token), delay);
+
+    // Code 4001 = token expired/invalid — don't wait, retry sooner with fresh token
+    const isTokenError = e.code === 4001;
+    if (isTokenError) {
+      console.warn('[CCO WS] Token rejected by server (4001) — will retry with fresh token');
+    }
+
+    if (_retryCount >= _MAX_RETRIES) {
+      console.warn(`[CCO WS] Max retries (${_MAX_RETRIES}) reached. WS stopped.`);
+      return;
+    }
+
+    _retryCount++;
+    const delay = isTokenError ? 500 : Math.min(_backoff, 16_000);
+    if (!isTokenError) _backoff = Math.min(_backoff * 2, 16_000);
+    console.log(`[CCO WS] Disconnected (code=${e.code}) — retrying in ${delay}ms (${_retryCount}/${_MAX_RETRIES})`);
+    _reconnectTimer = setTimeout(_connect, delay);
   };
 
-  _ws.onerror = () => _ws?.close();
+  _ws.onerror = () => {
+    // onerror always fires before onclose — let onclose handle retry
+    _ws?.close();
+  };
 }
 
 function _disconnect() {
   _intentionalClose = true;
+  _retryCount = 0;
+  _backoff = 1000;
   _stopPing();
   if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
   _ws?.close();
@@ -103,10 +154,21 @@ function _disconnect() {
   _notifyStatus('disconnected');
 }
 
+function _scheduledDisconnect() {
+  // Defer disconnect by 100ms — if StrictMode remounts within that window,
+  // _hookRefCount will be > 0 and we cancel the disconnect instead of
+  // tearing down a perfectly good connection.
+  if (_disconnectTimer) clearTimeout(_disconnectTimer);
+  _disconnectTimer = setTimeout(() => {
+    _disconnectTimer = null;
+    if (_hookRefCount <= 0) _disconnect();
+  }, 100);
+}
+
 // ── React hooks ──────────────────────────────────────────────────────────────
 
 export function useCCOWebSocket() {
-  const token = useAuthStore(s => s.token);
+  const token = useAuthStore(s => s.token);  // used only to trigger reconnect on token change
   const [status, setStatus] = useState<WSStatus>('disconnected');
 
   useEffect(() => {
@@ -121,10 +183,10 @@ export function useCCOWebSocket() {
   useEffect(() => {
     if (!token) return;
     _hookRefCount++;
-    _connect(token);
+    _connect();
     return () => {
       _hookRefCount--;
-      if (_hookRefCount <= 0) { _hookRefCount = 0; _disconnect(); }
+      if (_hookRefCount <= 0) { _hookRefCount = 0; _scheduledDisconnect(); }
     };
   }, [token]);
 
@@ -149,21 +211,49 @@ export function useBookingWebSocket(bookingId: string | null) {
 
   useEffect(() => {
     if (!bookingId || !token) return;
-    const url = `${getWsBase()}/ws/booking/${bookingId}?token=${token}`;
 
     let backoff = 1000;
+    let retryCount = 0;
+    const MAX_RETRIES = 15;
     let intentionalClose = false;
     let reconnTimer: ReturnType<typeof setTimeout> | null = null;
     let pingTimer: ReturnType<typeof setInterval> | null = null;
     let ws: WebSocket | null = null;
 
+    // ── StrictMode-safe deferred close ────────────────────────────────────
+    // React StrictMode mounts → unmounts → remounts every effect in dev.
+    // Without this guard, the cleanup from the first mount fires ws.close()
+    // on a CONNECTING socket, causing Firefox to log
+    // "NS_ERROR_WEBSOCKET_CONNECTION_REFUSED" even though the second mount
+    // reconnects successfully.  We defer the close by one tick so that if
+    // the component remounts immediately (StrictMode), the close is cancelled.
+    let closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function _safeClose() {
+      if (!ws) return;
+      if (ws.readyState === WebSocket.CONNECTING) {
+        // Can't close a CONNECTING socket cleanly — wait for it to open then close
+        ws.onopen = () => { ws?.close(); };
+        ws.onerror = null;   // prevent the error handler from double-closing
+      } else {
+        ws.close();
+      }
+    }
+
     function connect() {
-      if (ws?.readyState === WebSocket.OPEN) return;
+      if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return;
+      // Always read fresh token in case it was refreshed by the HTTP interceptor
+      const freshToken = localStorage.getItem('cco_token') ?? token;
+      const url = `${getWsBase()}/ws/booking/${bookingId}?token=${freshToken}`;
       setStatus('connecting');
+      console.log(`[Booking WS:${bookingId}] Connecting (attempt ${retryCount + 1})`);
       ws = new WebSocket(url);
 
       ws.onopen = () => {
+        if (intentionalClose) { ws?.close(); return; }  // cleanup fired before open
         backoff = 1000;
+        retryCount = 0;
+        console.log(`[Booking WS:${bookingId}] Connected ✓`);
         setStatus('connected');
         pingTimer = setInterval(() => {
           ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'PING' }));
@@ -177,24 +267,38 @@ export function useBookingWebSocket(bookingId: string | null) {
         } catch {}
       };
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
         if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
         setStatus('disconnected');
-        if (!intentionalClose) {
-          reconnTimer = setTimeout(connect, Math.min(backoff, 16_000));
-          backoff = Math.min(backoff * 2, 16_000);
+        if (intentionalClose) return;
+        if (retryCount >= MAX_RETRIES) {
+          console.warn(`[Booking WS:${bookingId}] Max retries reached. Stopped.`);
+          return;
         }
+        const isTokenError = e.code === 4001;
+        retryCount++;
+        const delay = isTokenError ? 500 : Math.min(backoff, 16_000);
+        if (!isTokenError) backoff = Math.min(backoff * 2, 16_000);
+        console.log(`[Booking WS:${bookingId}] Retrying in ${delay}ms (${retryCount}/${MAX_RETRIES})`);
+        reconnTimer = setTimeout(connect, delay);
       };
 
-      ws.onerror = () => ws?.close();
+      ws.onerror = () => { if (!intentionalClose) ws?.close(); };
     }
 
-    connect();
+    // Defer first connect by one tick — lets StrictMode's unmount+remount
+    // cancel the very first connection attempt before it even opens,
+    // preventing the CONNECTING→close race that Firefox flags as an error.
+    const startTimer = setTimeout(connect, 0);
+
     return () => {
       intentionalClose = true;
+      clearTimeout(startTimer);
       if (pingTimer) clearInterval(pingTimer);
       if (reconnTimer) clearTimeout(reconnTimer);
-      ws?.close();
+      if (closeTimer) clearTimeout(closeTimer);
+      _safeClose();
+      ws = null;
     };
   }, [bookingId, token]);
 

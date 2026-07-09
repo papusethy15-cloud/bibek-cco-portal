@@ -32,13 +32,15 @@ function _processQueue(newToken: string | null) {
 }
 
 function _fullLogout() {
+  // Remove session keys only — MPIN keys (cco_mpin_hash, cco_mpin_set) are
+  // intentionally kept so the next login doesn't re-prompt MPIN setup.
+  // If a different user logs in on this device, checkMpinStatus() re-fetches
+  // from the DB and updates the cache accordingly.
   [
     'cco_token',
     'cco_refresh_token',
     'cco_user',
     'cco_session_expires_at',
-    'cco_mpin_hash',
-    'cco_mpin_set',
   ].forEach((key) => localStorage.removeItem(key));
   window.location.href = '/login';
 }

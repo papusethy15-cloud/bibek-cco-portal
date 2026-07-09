@@ -60,9 +60,10 @@ export const bookingService = {
     const d    = new Date();
     const pad  = (n: number) => String(n).padStart(2, '0');
     const today = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    // Today's scheduler view shows ALL statuses including closed (CCO needs full picture for today)
+    // Use date_from + date_to (backend supports these; bare ?date= param is silently ignored).
+    // Do not pass exclude_status — CCO scheduler shows ALL statuses including RESCHEDULED/CLOSED.
     const res = await api.get<ApiResponse<PaginatedResponse<Booking>>>(
-      `/bookings?date=${today}&per_page=100`
+      `/bookings?date_from=${today}&date_to=${today}&per_page=100`
     );
     return res.data.data?.items || [];
   },
