@@ -43,7 +43,7 @@ export function LoginPage() {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Invalid email or password.';
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || 'Invalid email or password.';
       setError(msg);
     } finally {
       setLoading(false);

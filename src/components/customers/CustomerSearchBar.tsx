@@ -10,30 +10,36 @@ interface Props {
 export const CustomerSearchBar: React.FC<Props> = ({ onSearch, loading }) => {
   const [mobile, setMobile] = useState('');
 
+  const [validationErr, setValidationErr] = React.useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = mobile.trim();
-    if (trimmed.length < 10) return;
-    onSearch(trimmed);
+    const digits = mobile.replace(/\D/g, '');
+    if (digits.length !== 10) { setValidationErr('Enter exactly 10 digits.'); return; }
+    if (!/^[6-9]/.test(digits)) { setValidationErr('Mobile must start with 6, 7, 8, or 9.'); return; }
+    setValidationErr('');
+    onSearch(digits);
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <Input
-            label="Customer mobile number"
-            placeholder="Enter 10-digit mobile number"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value.replace(/[^\d+]/g, ''))}
-            autoFocus
-            icon={
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-            }
-          />
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Customer mobile number</label>
+          <div className="flex rounded-xl overflow-hidden border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 transition">
+            <span className="px-3 flex items-center bg-gray-50 text-gray-500 text-sm border-r border-gray-200 select-none font-medium">+91</span>
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="9XXXXXXXXX"
+              value={mobile}
+              onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '').slice(0, 10)); setValidationErr(''); }}
+              autoFocus
+              className="flex-1 px-3 py-2.5 text-sm outline-none"
+            />
+          </div>
+          {validationErr && <p className="text-xs text-red-500 mt-1">{validationErr}</p>}
         </div>
         <Button type="submit" loading={loading} size="md">
           Search

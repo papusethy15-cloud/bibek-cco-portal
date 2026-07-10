@@ -34,14 +34,16 @@ export const NewCustomerModal: React.FC<Props> = ({ open, onClose, prefillMobile
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || mobile.trim().length < 10) {
-      setError('Name and a valid mobile number are required.');
+    const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
+    if (!name.trim()) { setError('Customer name is required.'); return; }
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      setError('Enter a valid 10-digit Indian mobile number (starts with 6-9).');
       return;
     }
     setSaving(true);
     setError('');
     try {
-      const customer = await customerService.create({ name: name.trim(), mobile: mobile.trim(), email: email.trim() || undefined });
+      const customer = await customerService.create({ name: name.trim(), mobile: cleanMobile, email: email.trim() || undefined });
 
       // Add default address if provided — CCO can also skip and add it later
       if (addressLine1.trim() && city.trim() && state.trim() && pincode.trim()) {
@@ -70,8 +72,23 @@ export const NewCustomerModal: React.FC<Props> = ({ open, onClose, prefillMobile
         {error && <AlertBanner type="error" message={error} onClose={() => setError('')} />}
 
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input label="Mobile number" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/[^\d+]/g, ''))} required />
+          <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Customer full name" />
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Mobile number <span className="text-red-500">*</span></label>
+            <div className="flex rounded-xl overflow-hidden border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 transition">
+              <span className="px-3 flex items-center bg-gray-50 text-gray-500 text-sm border-r border-gray-200 select-none font-medium">+91</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="9XXXXXXXXX"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                className="flex-1 px-3 py-2.5 text-sm outline-none"
+                required
+              />
+            </div>
+          </div>
         </div>
         <Input label="Email (optional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
