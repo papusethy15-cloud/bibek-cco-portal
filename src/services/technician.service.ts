@@ -36,8 +36,9 @@ export const technicianService = {
     return res.data.data || [];
   },
 
-  async manualAssign(bookingId: string, technicianId: string, notes?: string): Promise<void> {
-    await api.post('/assignments/manual', { booking_id: bookingId, technician_id: technicianId, notes: notes || undefined });
+  async manualAssign(bookingId: string, technicianId: string, notes?: string): Promise<any> {
+    const res = await api.post('/assignments/manual', { booking_id: bookingId, technician_id: technicianId, notes: notes || undefined });
+    return (res as any).data?.data || {};
   },
 
   async autoAssign(bookingId: string, notes?: string): Promise<{ technician_name?: string; score?: number }> {

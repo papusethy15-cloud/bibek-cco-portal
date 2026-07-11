@@ -110,6 +110,7 @@ export function BookingsPage() {
   const [success,         setSuccess]         = useState('');
   const [overdueAlerts,   setOverdueAlerts]   = useState<Booking[]>([]);
   const [prefillCustomer, setPrefillCustomer] = useState<Customer | null>(null);
+  const [manualAlerts,    setManualAlerts]    = useState<Array<{ booking_id: string; booking_number: string; message: string; ts: number }>>([]);
   const [groupBySchedule, setGroupBySchedule] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,7 +121,14 @@ export function BookingsPage() {
   useEffect(() => {
     const unsub = subscribe('BOOKING_STATUS_CHANGED', () => { load(page); });
     const unsub2 = subscribe('ASSIGNMENT_CREATED',     () => { load(page); });
-    return () => { unsub(); unsub2(); };
+    const unsub3 = subscribe('BOOKING_NEEDS_MANUAL_ASSIGN', (payload: any) => {
+      load(page);
+      setManualAlerts(prev => [
+        { booking_id: payload?.booking_id || '', booking_number: payload?.booking_number || '', message: payload?.message || `Booking ${payload?.booking_number} needs manual assignment.`, ts: Date.now() },
+        ...prev.slice(0, 4),
+      ]);
+    });
+    return () => { unsub(); unsub2(); unsub3(); };
   }, [page]);
 
   // Navigate from CustomerProfileCard
@@ -254,6 +262,46 @@ export function BookingsPage() {
       </div>
 
       {success && <AlertBanner type="success" message={success} onClose={() => setSuccess('')} />}
+
+      {/* ── Manual Assign Needed Alert Banners ───────────────────────────── */}
+      {manualAlerts.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {manualAlerts.map((alert, i) => (
+            <div
+              key={`${alert.booking_id}-${alert.ts}`}
+              className="bg-red-50 border-2 border-red-300 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🚨</span>
+                <div>
+                  <p className="text-sm font-bold text-red-800">
+                    Manual Assignment Required — #{alert.booking_number}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">{alert.message}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    const bkg = bookings.find((b: any) => b.id === alert.booking_id);
+                    if (bkg) setSelected(bkg);
+                    setManualAlerts(prev => prev.filter((_, idx) => idx !== i));
+                  }}
+                  className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition"
+                >
+                  👷 Assign Now
+                </button>
+                <button
+                  onClick={() => setManualAlerts(prev => prev.filter((_, idx) => idx !== i))}
+                  className="text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Overdue alert strip ── */}
       {overdueAlerts.length > 0 && (

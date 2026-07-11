@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useCCOWebSocket } from '../hooks/useCCOWebSocket';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { bookingService } from '../services/booking.service';
@@ -74,6 +75,7 @@ export function DashboardPage() {
   const [todayCallCount, setTodayCallCount] = useState(0);
   const [overduePayLater, setOverduePayLater] = useState<PaymentTransaction[]>([]);
   const [workflowBooking, setWorkflowBooking] = useState<Booking | null>(null);
+  const [manualAlerts, setManualAlerts] = useState<Array<{ booking_id: string; booking_number: string; message: string; ts: number }>>([]);
   const [followups, setFollowups] = useState<CRMFollowup[]>([]);
   const [markingDone, setMarkingDone] = useState<string | null>(null);
 
@@ -163,6 +165,18 @@ export function DashboardPage() {
     { label: 'Technicians', sub: 'Check workloads', icon: '🔧', path: '/technicians', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
   ];
 
+  // ── WS: manual assign needed alerts ────────────────────────────────────────
+  const { subscribe } = useCCOWebSocket();
+  useEffect(() => {
+    const unsub = subscribe('BOOKING_NEEDS_MANUAL_ASSIGN', (payload: any) => {
+      setManualAlerts(prev => [
+        { booking_id: payload?.booking_id || '', booking_number: payload?.booking_number || '', message: payload?.message || `Booking ${payload?.booking_number} needs manual assignment.`, ts: Date.now() },
+        ...prev.slice(0, 4),
+      ]);
+    });
+    return () => unsub();
+  }, [subscribe]);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Greeting */}
@@ -172,6 +186,40 @@ export function DashboardPage() {
           {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
+
+      {/* ── Manual Assign Needed Alerts ── */}
+      {manualAlerts.length > 0 && (
+        <div className="space-y-2">
+          {manualAlerts.map((alert, i) => (
+            <div
+              key={`${alert.booking_id}-${alert.ts}`}
+              className="bg-red-50 border-2 border-red-300 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🚨</span>
+                <div>
+                  <p className="text-sm font-bold text-red-800">Manual Assignment Required — #{alert.booking_number}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{alert.message}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => { navigate('/bookings'); setManualAlerts(prev => prev.filter((_, idx) => idx !== i)); }}
+                  className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition"
+                >
+                  👷 Go to Bookings
+                </button>
+                <button
+                  onClick={() => setManualAlerts(prev => prev.filter((_, idx) => idx !== i))}
+                  className="text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="py-12"><Spinner /></div>

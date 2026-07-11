@@ -3,6 +3,25 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Split vendor libraries into separate cacheable chunks so the main
+    // app bundle stays well under the 500 kB warning threshold.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React runtime — almost never changes, cache indefinitely
+          'vendor-react': ['react', 'react-dom'],
+          // Routing
+          'vendor-router': ['react-router-dom'],
+          // HTTP client
+          'vendor-axios': ['axios'],
+          // State management
+          'vendor-zustand': ['zustand'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     port: 3001,
     open: true,
