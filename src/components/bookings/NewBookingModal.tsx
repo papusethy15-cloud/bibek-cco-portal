@@ -380,6 +380,7 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
         domain_id:       domainId || undefined,
         appliance_brand: selAppl?.brand_name || brand || undefined,
         appliance_model: selAppl?.model      || model || undefined,
+        appliance_id:    selAppl?.id         || undefined,
         scheduled_date:  scheduledDate,
         scheduled_slot:  slot,
         notes:           notes || undefined,
@@ -792,20 +793,35 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                   Appliance <span className="font-normal text-gray-400">(optional)</span>
                 </label>
-                {appliances.length > 0 ? (
-                  <select
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4FD8]"
-                    value={applianceId}
-                    onChange={e => setApplianceId(e.target.value)}
-                  >
-                    <option value="">Skip / Technician fills later</option>
-                    {appliances.map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.category || a.category_name || 'Appliance'}{a.brand_name ? ` — ${a.brand_name}` : ''}{a.model ? ` (${a.model})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
+                {appliances.length > 0 ? (() => {
+                  // Filter appliances by selected service category
+                  const svcCatId = (selSvc as any)?.appliance_category_id || (selSvc as any)?.category_id || ''
+                  const catFiltered = svcCatId
+                    ? appliances.filter(a => !((a as any).appliance_category_id) || (a as any).appliance_category_id === svcCatId)
+                    : appliances
+                  const displayAppl = catFiltered.length > 0 ? catFiltered : appliances
+                  return (
+                    <>
+                      {catFiltered.length < appliances.length && selSvc && (
+                        <div className="text-[10px] text-blue-700 bg-blue-50 rounded px-2 py-1 mb-1.5">
+                          🔧 {catFiltered.length} {(selSvc as any).category_name || 'category'}-related · {appliances.length - catFiltered.length} other{appliances.length - catFiltered.length !== 1 ? 's' : ''} hidden
+                        </div>
+                      )}
+                      <select
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4FD8]"
+                        value={applianceId}
+                        onChange={e => setApplianceId(e.target.value)}
+                      >
+                        <option value="">Skip / Technician fills later</option>
+                        {displayAppl.map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.category || a.category_name || 'Appliance'}{a.brand_name ? ` — ${a.brand_name}` : ''}{a.model ? ` (${a.model})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )
+                })() : (
                   <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
                     No appliances registered. Technician will fill during service.
                   </div>
