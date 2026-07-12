@@ -32,7 +32,14 @@ export const bookingService = {
 
   async create(data: Partial<Booking>): Promise<Booking> {
     const res = await api.post<ApiResponse<Booking>>('/bookings', { ...data, source: 'CALL_CENTER' });
-    return res.data.data;
+    // POST /bookings returns only {id, booking_number, status} — re-fetch the full detail
+    // so the returned object includes service_name, address_str, etc.
+    const created = res.data.data;
+    try {
+      return await bookingService.getById(created.id);
+    } catch {
+      return created;
+    }
   },
 
   async updateStatus(id: string, status: string, reason?: string): Promise<Booking> {

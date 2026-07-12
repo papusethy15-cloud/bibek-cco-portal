@@ -144,7 +144,11 @@ export function BookingDetailPanel({ booking, onClose, onUpdated }: Props) {
             <Section title="Booking Details">
               <Row label="Service" value={detail.service_name} />
               <Row label="Brand / Model" value={[detail.appliance_brand, detail.appliance_model].filter(Boolean).join(' · ')} />
-              <Row label="Address" value={[detail.address_line, detail.city].filter(Boolean).join(', ')} />
+              <Row label="Address" value={
+                detail.address_str && detail.address_str !== '—'
+                  ? (detail.address_label ? `[${detail.address_label}] ${detail.address_str}` : detail.address_str)
+                  : [detail.address_line, detail.city].filter(Boolean).join(', ') || '—'
+              } />
               <div className="flex items-center justify-between py-1">
                 <span className="text-sm text-gray-500">GPS</span>
                 {detail.address_latitude && detail.address_longitude ? (

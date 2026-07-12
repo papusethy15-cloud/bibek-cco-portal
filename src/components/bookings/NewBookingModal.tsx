@@ -180,6 +180,7 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
   const [selSvc,    setSelSvc]    = useState<ServiceOption | null>(null);
   const [svcDropOpen, setSvcDropOpen] = useState(false);
   const [cityPrices,  setCityPrices]  = useState<any[]>([]);
+  const [cities,      setCities]      = useState<any[]>([]);
   const [loadPrice,   setLoadPrice]   = useState(false);
 
   const [addressId,   setAddressId]   = useState('');
@@ -209,7 +210,15 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
   // ─────────────────────────────────────────────────────────────────────────────
   // Init
   // ─────────────────────────────────────────────────────────────────────────────
+  // Load cities list for address form dropdown
   useEffect(() => {
+    api.get<any>('/cities?limit=100').then(r => {
+      const items = r.data?.data?.items ?? r.data?.data ?? [];
+      setCities(Array.isArray(items) ? items : []);
+    }).catch(() => {});
+  }, []);
+
+    useEffect(() => {
     if (!open) return;
     loadDomains();
     if (prefillCustomer) {
@@ -378,6 +387,8 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
         service_id:      selSvc.id,
         address_id:      addressId || undefined,
         domain_id:       domainId || undefined,
+        city_id:         cityPrice?.city_id || undefined,
+        city:            cityPrice?.city_name || (selAddr as any)?.city || undefined,
         appliance_brand: selAppl?.brand_name || brand || undefined,
         appliance_model: selAppl?.model      || model || undefined,
         appliance_id:    selAppl?.id         || undefined,
@@ -598,7 +609,23 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">City *</label>
-                    <Input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} />
+                    {cities.length > 0 ? (
+                      <select className="w-full border rounded px-3 py-2 text-sm"
+                        value={addrForm.city}
+                        onChange={e => {
+                          const city = cities.find((c: any) => c.name === e.target.value);
+                          setAddrForm(f => ({
+                            ...f,
+                            city: e.target.value,
+                            state: city?.state ?? f.state,
+                          }));
+                        }}>
+                        <option value="">Select city</option>
+                        {cities.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    ) : (
+                      <Input value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} />
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">State *</label>
