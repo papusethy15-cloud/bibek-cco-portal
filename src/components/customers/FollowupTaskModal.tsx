@@ -4,6 +4,7 @@
  * Triggered automatically when CallLogModal outcome = CALLBACK_REQUESTED,
  * or manually from the dashboard follow-up widget.
  */
+import { todayIST } from "../../lib/tz";
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -86,7 +87,7 @@ export function FollowupTaskModal({
           <label className="block text-xs font-medium text-gray-500 mb-1">Due Date *</label>
           <input
             type="date"
-            min={new Date().toISOString().split('T')[0]}
+            min={todayIST()}
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4FD8]"

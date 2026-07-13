@@ -1,3 +1,4 @@
+import { todayIST } from "../lib/tz";
 import React, { useState, useEffect, useCallback } from 'react';
 import { technicianService } from '../services/technician.service';
 import { bookingService } from '../services/booking.service';
@@ -99,7 +100,7 @@ export function TechniciansPage() {
       setTechnicians(techs);
 
       // Fetch job counts for all active techs in parallel — THE FIX
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayIST();
       const activeTechs = techs.filter(t => t.status === 'ACTIVE');
       setLoadingJobs(true);
       try {
@@ -135,7 +136,7 @@ export function TechniciansPage() {
     setSelected(tech);
     setLoadingBookings(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayIST();
       const res = await bookingService.list({ technician_id: tech.id, date: today, limit: 50 });
       setTechBookings(res.items || []);
     } catch {

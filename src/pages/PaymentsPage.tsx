@@ -1,3 +1,4 @@
+import { todayIST } from "../lib/tz";
 import React, { useState, useEffect, useCallback } from 'react';
 import { paymentService, SETTLED_PAYMENT_STATUSES } from '../services/payment.service';
 import { PaymentTransaction } from '../types';
@@ -115,7 +116,7 @@ export function PaymentsPage() {
       const res = await paymentService.listAll({ status: 'SUCCESS', per_page: '100', date_from: thirtyDaysAgo });
       const items = res.items || [];
       setAllSuccessful(items);
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayIST();
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const todayItems = items.filter(t => (t.paid_at || t.created_at)?.startsWith(today));
       const weekItems = items.filter(t => (t.paid_at || t.created_at) >= weekAgo);
@@ -164,7 +165,7 @@ export function PaymentsPage() {
   const payLaterTotal = payLaterDue.reduce((s, t) => s + t.amount, 0);
   const overdueCount = payLaterDue.filter(t => {
     const d = parseDueDate(t);
-    return d && d < new Date().toISOString().split('T')[0];
+    return d && d < todayIST();
   }).length;
 
   const filtered = filter
@@ -319,7 +320,7 @@ export function PaymentsPage() {
                 <tbody>
                   {filtered.map(t => {
                     const dueDate = t.method === 'PAY_LATER' ? parseDueDate(t) : null;
-                    const isOverdue = dueDate && dueDate < new Date().toISOString().split('T')[0];
+                    const isOverdue = dueDate && dueDate < todayIST();
                     return (
                       <tr
                         key={t.id}
@@ -435,7 +436,7 @@ export function PaymentsPage() {
               <div className="divide-y divide-gray-50">
                 {payLaterDue.map(t => {
                   const dueDate = parseDueDate(t);
-                  const isOverdue = dueDate && dueDate < new Date().toISOString().split('T')[0];
+                  const isOverdue = dueDate && dueDate < todayIST();
                   return (
                     <div key={t.id} className={`px-5 py-4 hover:bg-gray-50/50 ${isOverdue ? 'bg-red-50/30 border-l-4 border-red-400' : ''}`}>
                       <div className="flex items-start justify-between gap-4">

@@ -1,3 +1,4 @@
+import { todayIST } from "../lib/tz";
 import React, { useState, useEffect, useCallback } from 'react';
 import { callLogService, CallLogEntry } from '../services/callLog.service';
 import { customerService } from '../services/customer.service';
@@ -97,7 +98,7 @@ export function CallLogPage() {
   useEffect(() => { load(1); }, [load]);
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayIST();
     const todayCalls = calls.filter(c => c.created_at?.startsWith(today));
     const resolved = calls.filter(c => c.outcome === 'RESOLVED').length;
     const noAnswer = calls.filter(c => c.outcome === 'NO_ANSWER').length;

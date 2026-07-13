@@ -9,6 +9,7 @@
  * - Reschedule + assign technician support
  */
 
+import { todayIST, fmtDateIST, fmtDateTimeIST } from "../../lib/tz";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Booking } from '../../types';
 import { bookingActionsService } from '../../services/booking.service';
@@ -508,7 +509,9 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
       setPaySaving(true); setPayErr('');
       try {
         // Convert date string (YYYY-MM-DD) to ISO datetime (end-of-day UTC)
-        const dueDateTime = new Date(`${payDue}T23:59:00`).toISOString();
+        // Treat payDue as IST date, convert 23:59 IST to UTC
+        const _istOff = 5.5 * 60 * 60 * 1000;
+        const dueDateTime = new Date(new Date(`${payDue}T23:59:00`).getTime() - _istOff).toISOString();
         await api.post('/payments/cash', {
           invoice_id: payTargetInv.id,
           amount: bal,
@@ -1903,7 +1906,7 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
             {payMethod === 'PAY_LATER' && (
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Collection Date *</label>
-                <input type="date" min={(() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })()}
+                <input type="date" min={todayIST()}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4FD8]"
                   value={payDue} onChange={e => setPayDue(e.target.value)} />
               </div>

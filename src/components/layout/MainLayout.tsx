@@ -1,3 +1,4 @@
+import { todayIST } from "../../lib/tz";
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -46,7 +47,7 @@ function useNotifications() {
       ]);
 
       const newNotifs: AppNotification[] = [];
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayIST();
 
       // New admin replies on escalations
       if (escRes.status === 'fulfilled') {

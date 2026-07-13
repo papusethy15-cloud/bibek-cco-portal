@@ -1,3 +1,4 @@
+import { todayIST } from "../lib/tz";
 import React, { useState, useEffect } from 'react';
 import { useCCOWebSocket } from '../hooks/useCCOWebSocket';
 import { useNavigate } from 'react-router-dom';
@@ -89,7 +90,7 @@ export function DashboardPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayIST();
       const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
 
       const results = await Promise.allSettled([
@@ -123,7 +124,7 @@ export function DashboardPage() {
         setPayLaterCount(due.length);
         setPayLaterAmount(due.reduce((s: number, t: any) => s + (t.amount || 0), 0));
         // Overdue = PAY_LATER records whose due date (parsed from notes) is in the past
-        const today = new Date().toISOString().split('T')[0];
+        const today = todayIST();
         const overdue = due.filter((t: any) => {
           const match = (t.notes || '').match(/PAY_LATER: due (\d{4}-\d{2}-\d{2})/);
           return match && match[1] < today;

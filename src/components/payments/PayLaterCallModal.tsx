@@ -12,6 +12,7 @@
  *    - Refused to pay        → escalate to admin
  * 3. Auto-logs a PAYMENT_REMINDER CallLog entry for admin audit trail
  */
+import { todayIST } from "../../lib/tz";
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -75,7 +76,7 @@ export function PayLaterCallModal({ open, transaction, customer, onClose, onLogg
 
   const existingDueMatch = (transaction.notes || '').match(/PAY_LATER: due (\d{4}-\d{2}-\d{2})/);
   const existingDue = existingDueMatch ? existingDueMatch[1] : null;
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayIST();
 
   const handleSubmit = async () => {
     if (!outcome) { setError('Please select a call outcome.'); return; }

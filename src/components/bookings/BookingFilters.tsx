@@ -1,3 +1,4 @@
+import { todayIST, fmtDateIST, fmtDateTimeIST } from "../../lib/tz";
 import React from 'react';
 
 interface Props {
@@ -127,9 +128,9 @@ export function BookingFilters({
 
         {/* Today shortcut */}
         <button
-          onClick={() => onDate(date === new Date().toISOString().split('T')[0] ? '' : new Date().toISOString().split('T')[0])}
+          onClick={() => onDate(date === todayIST() ? '' : todayIST())}
           className={`px-3 py-2 rounded-lg text-xs font-medium border transition self-end ${
-            date === new Date().toISOString().split('T')[0]
+            date === todayIST()
               ? 'bg-blue-600 text-white border-blue-600'
               : 'text-blue-600 border-blue-200 hover:bg-blue-50'
           }`}
