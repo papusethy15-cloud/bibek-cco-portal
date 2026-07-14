@@ -273,7 +273,7 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
   const { lastEvent: wsEvent } = useBookingWebSocket(initBooking.id);
   useEffect(() => {
     if (!wsEvent) return;
-    const isQuotation   = ['QUOTATION_CREATED','QUOTATION_UPDATED','QUOTATION_DELETED'].includes(wsEvent.type);
+    const isQuotation   = ['QUOTATION_CREATED','QUOTATION_UPDATED','QUOTATION_DELETED','QUOTATION_SUBMITTED'].includes(wsEvent.type);
     const isBooking     = wsEvent.type === 'BOOKING_STATUS_CHANGED';
     const isInspection  = wsEvent.type === 'INSPECTION_SUBMITTED';
     if (!isQuotation && !isBooking && !isInspection) return;

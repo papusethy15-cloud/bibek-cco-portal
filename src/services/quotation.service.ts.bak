@@ -23,7 +23,6 @@ export const quotationService = {
   get:           (id: string) => api.get(`/quotations/${id}`),
   create:        (d: any)     => api.post('/quotations', d),
   update:        (id: string, d: any) => api.put(`/quotations/${id}`, d),
-  delete:        (id: string)         => api.delete(`/quotations/${id}`),
 
   // ── Workflow ────────────────────────────────────────────────────────────────
   submit:        (id: string)                => api.post(`/quotations/${id}/submit`, {}),
