@@ -431,8 +431,8 @@ export function NewBookingModal({ open, onClose, onCreated, prefillCustomer, pre
   const basePrice      = selSvc?.base_price ?? 0;
   const effectivePrice = cityPrice ? cityPrice.price : basePrice;
   const gstPct         = selSvc?.gst_percent ?? 0;
-  const gstAmt         = +(effectivePrice * gstPct / 100).toFixed(2);
-  const totalPrice     = +(effectivePrice + gstAmt).toFixed(2);
+  const gstAmt         = Math.round(effectivePrice * gstPct / 100);
+  const totalPrice     = Math.round(effectivePrice + gstAmt);
   const selectedSlotCount = slot ? (slotCounts[slot] || 0) : 0;
   const totalOnDate    = Object.values(slotCounts).reduce((a, b) => a + b, 0);
 

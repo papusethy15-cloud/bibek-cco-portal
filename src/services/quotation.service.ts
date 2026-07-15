@@ -73,4 +73,8 @@ export const quotationService = {
   // ── Customer GST profile ────────────────────────────────────────────────────
   getCustomer: (customerId: string) =>
     api.get(`/customers/${customerId}`),
+
+  // ── PDF download ─────────────────────────────────────────────────────────────
+  pdf: (id: string) =>
+    api.get(`/quotations/${id}/pdf`, { responseType: 'blob' }),
 };

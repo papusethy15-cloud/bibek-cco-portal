@@ -39,7 +39,7 @@ import { useBookingWebSocket } from '../../hooks/useCCOWebSocket';
 // ─── constants ────────────────────────────────────────────────────────────────
 const EDITABLE = ['DRAFT', 'REJECTED', 'REVISED'];
 const money = (n: number | null | undefined) =>
-  `₹${(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
 const fmtDT = (d: string) =>
   d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 

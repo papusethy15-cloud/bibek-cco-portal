@@ -494,7 +494,7 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
   // ── Payment submit ─────────────────────────────────────────────
   const openPayForm = (inv: Invoice) => {
     setPayTargetInv(inv);
-    setPayAmount((balanceByInvId[inv.id] || 0).toFixed(2));
+    setPayAmount(String(Math.round(balanceByInvId[inv.id] || 0)));
     setPayMethod('CASH'); setPayRef(''); setPayNotes('');
     setPayDue(''); setPayQR(''); setPayLink(''); setPayErr('');
     setShowPayForm(true);
@@ -1134,7 +1134,7 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
                           setActing(true); setErr(""); setOk("");
                           try {
                             await bookingActionsService.visitingCharge(booking.id, amt, notes);
-                            setOk(`✅ Visiting charge ₹${amt.toFixed(2)} initiated`);
+                            setOk(`✅ Visiting charge ₹${Math.round(amt).toLocaleString('en-IN')} initiated`);
                             await load(); onUpdated();
                           } catch (ex: any) { setErr(extractApiError(ex, "Failed")); }
                           finally { setActing(false); }

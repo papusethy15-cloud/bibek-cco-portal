@@ -55,6 +55,7 @@ export function BookingDetailPanel({ booking, onClose, onUpdated }: Props) {
   const [showGeoModal, setShowGeoModal] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [downloadingQuotationPdf, setDownloadingQuotationPdf] = useState<string | null>(null);
 
   useEffect(() => {
     loadAll();
@@ -89,6 +90,24 @@ export function BookingDetailPanel({ booking, onClose, onUpdated }: Props) {
       setError(e?.response?.data?.message || 'Failed to cancel.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleDownloadQuotationPdf = async (q: Quotation) => {
+    setDownloadingQuotationPdf(q.id);
+    setError('');
+    try {
+      const r = await quotationService.pdf(q.id);
+      const url = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${q.quotation_number || q.id}.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Could not download quotation PDF. Please try again.');
+    } finally {
+      setDownloadingQuotationPdf(null);
     }
   };
 
@@ -219,6 +238,14 @@ export function BookingDetailPanel({ booking, onClose, onUpdated }: Props) {
                           Approve
                         </button>
                       )}
+                      <button
+                        onClick={() => handleDownloadQuotationPdf(q)}
+                        disabled={downloadingQuotationPdf === q.id}
+                        className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                        title="Download Quotation PDF"
+                      >
+                        {downloadingQuotationPdf === q.id ? '⏳' : '📄 PDF'}
+                      </button>
                     </div>
                   </div>
                 ))}
