@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/auth.service';
 import { useBadgeCounts } from '../../hooks/useBadgeCounts';
+import { usePlatformBrand } from '../../hooks/usePlatformBrand';
 
 interface NavItem {
   path: string;
@@ -20,6 +21,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const counts = useBadgeCounts();
+  const brand = usePlatformBrand();
 
   const handleLogout = () => {
     authService.logout();
@@ -147,8 +149,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <div className={`flex items-center h-16 border-b border-[#1B4FD8]/30 px-3 shrink-0 ${collapsed ? 'justify-center' : 'gap-3'}`}>
         {!collapsed && (
           <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm truncate">CCO Portal</p>
-            <p className="text-blue-300 text-[10px] truncate">Palei Solutions</p>
+            {brand.logo_url ? (
+              <img
+                src={brand.logo_url}
+                alt={brand.app_name}
+                style={{ height: 28, maxWidth: 120, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+              />
+            ) : (
+              <>
+                <p className="text-white font-bold text-sm truncate">{brand.app_name}</p>
+                <p className="text-blue-300 text-[10px] truncate">{brand.tagline}</p>
+              </>
+            )}
           </div>
         )}
         <button

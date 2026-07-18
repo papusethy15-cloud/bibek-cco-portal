@@ -5,10 +5,12 @@ import { useAuthStore } from '../store/authStore';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { AlertBanner } from '../components/ui/AlertBanner';
+import { usePlatformBrand } from '../hooks/usePlatformBrand';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { setAuth, setMpinSet } = useAuthStore();
+  const brand = usePlatformBrand();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,14 +27,10 @@ export function LoginPage() {
     setError('');
     try {
       const res = await authService.login(email.trim(), password);
-      // Save both tokens and stamp the 24h session window
       setAuth(res.user, res.access_token, res.refresh_token);
       authService.stampSession();
-      // Auto check-in for attendance (non-blocking)
       authService.checkIn();
 
-      // res.mpin_set comes directly from the backend (checks DB).
-      // Also sync the localStorage cache so isMpinSet() is consistent.
       const mpinIsSet = res.mpin_set;
       if (mpinIsSet) {
         localStorage.setItem('cco_mpin_set', 'true');
@@ -68,14 +66,23 @@ export function LoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
-            <svg className="w-9 h-9 text-[#1B4FD8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">CCO Portal</h1>
-          <p className="text-blue-200 text-sm mt-1">Palei Solutions — Customer Care Operations</p>
+          {brand.logo_url ? (
+            <img
+              src={brand.logo_url}
+              alt={brand.app_name}
+              className="h-14 max-w-[180px] object-contain mx-auto mb-4 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.12)', padding: '8px 12px' }}
+            />
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
+              <svg className="w-9 h-9 text-[#1B4FD8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+          )}
+          <h1 className="text-2xl font-bold text-white">{brand.app_name}</h1>
+          <p className="text-blue-200 text-sm mt-1">{brand.tagline}</p>
         </div>
 
         {/* Card */}
@@ -133,8 +140,7 @@ export function LoginPage() {
                   </svg>
                 ) : (
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
