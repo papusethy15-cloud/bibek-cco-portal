@@ -23,6 +23,7 @@ import { SchedulerPage }        from './pages/SchedulerPage';
 import { CallLogPage }          from './pages/CallLogPage';
 import { CallbackRequestsPage } from './pages/CallbackRequestsPage';
 import { ProfilePage }          from './pages/ProfilePage';
+import { SalarySlipsPage }     from './pages/SalarySlipsPage';
 
 // ─── Boot gate ────────────────────────────────────────────────────────────────
 // Shown while we validate the stored token/session before rendering anything.
@@ -112,6 +113,7 @@ export default function App() {
             <Route path="/call-log"          element={<CallLogPage />} />
             <Route path="/callback-requests" element={<CallbackRequestsPage />} />
             <Route path="/profile"           element={<ProfilePage />} />
+            <Route path="/salary-slips"     element={<SalarySlipsPage />} />
           </Route>
 
           {/* Default */}

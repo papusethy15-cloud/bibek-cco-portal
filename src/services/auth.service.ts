@@ -44,6 +44,24 @@ export const authService = {
     };
   },
 
+  // ── CCO Attendance: auto check-in after login ──────────────────────────
+  async checkIn(): Promise<void> {
+    try {
+      await api.post('/cco-attendance/check-in');
+    } catch (e) {
+      // Non-fatal — attendance failure should not block CCO work
+      console.warn('[attendance] check-in failed:', e);
+    }
+  },
+
+  async checkOut(): Promise<void> {
+    try {
+      await api.post('/cco-attendance/check-out');
+    } catch (e) {
+      console.warn('[attendance] check-out failed:', e);
+    }
+  },
+
   async getMe(): Promise<AuthUser> {
     const res = await api.get<ApiResponse<AuthUser>>('/auth/me');
     return res.data.data;
@@ -120,6 +138,8 @@ export const authService = {
   // MPIN belongs to the user account, not the session.
   // When the same CCO logs back in, their MPIN should still work.
   logout(): void {
+    // Fire check-out (best-effort, non-blocking) before clearing token
+    this.checkOut().catch(() => {});
     localStorage.removeItem('cco_token');
     localStorage.removeItem('cco_refresh_token');
     localStorage.removeItem('cco_user');

@@ -28,6 +28,8 @@ export function LoginPage() {
       // Save both tokens and stamp the 24h session window
       setAuth(res.user, res.access_token, res.refresh_token);
       authService.stampSession();
+      // Auto check-in for attendance (non-blocking)
+      authService.checkIn();
 
       // res.mpin_set comes directly from the backend (checks DB).
       // Also sync the localStorage cache so isMpinSet() is consistent.

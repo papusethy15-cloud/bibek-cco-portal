@@ -320,6 +320,11 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
   payments.filter(p => p.status === 'SUCCESS').forEach(p => {
     if (p.invoice_id) paidByInvId[p.invoice_id] = (paidByInvId[p.invoice_id] || 0) + (p.amount || 0);
   });
+  // Implement 5: detect if all SUCCESS payments were collected by technician on-site
+  const successPayments = payments.filter((p: any) => p.status === 'SUCCESS');
+  const allPaidByTechnician = successPayments.length > 0
+    && successPayments.every((p: any) => p.collected_by_role === 'TECHNICIAN');
+
   const hasInvoice      = invoices.length > 0;
 
   // ── Pay Later derived state ──────────────────────────────────────────────
@@ -1012,11 +1017,21 @@ export function BookingWorkflowPanel({ booking: initBooking, onClose, onUpdated 
                       );
                     })}
 
-                    {/* Mark Paid */}
-                    {hasInvoice && totalOutstanding <= 0 && !['PAID','CLOSED','SETTLED'].includes(status) && (
+                    {/* Mark Paid — skip when technician already collected all payments on-site */}
+                    {hasInvoice && totalOutstanding <= 0 && !['PAID','CLOSED','SETTLED'].includes(status) && !allPaidByTechnician && (
                       <ActionBtn icon="✅" label="Mark as Fully Paid" color="#059669" bg="#F0FDF4" border="#86EFAC"
                         hint={`All ${invoices.length} invoice(s) collected (${money(totalPaid)})`}
                         onClick={() => transition('markPaid', 'Marked as fully paid')} loading={acting} />
+                    )}
+                    {/* Implement 5: technician collected full payment on-site — info banner */}
+                    {hasInvoice && totalOutstanding <= 0 && !['PAID','CLOSED','SETTLED'].includes(status) && allPaidByTechnician && (
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-start gap-2 text-sm text-green-800">
+                        <span className="text-base">✅</span>
+                        <span>
+                          <strong>Payment collected by technician on-site</strong> — {money(totalPaid)} received.{' '}
+                          No admin confirmation needed. Use <em>Settle &amp; Close</em> to finalize.
+                        </span>
+                      </div>
                     )}
 
                     {/* PENDING_VERIFICATION — visiting charge */}

@@ -11,6 +11,8 @@ import api from '../../services/api';
 import { escalationService } from '../../services/escalation.service';
 import { paymentService } from '../../services/payment.service';
 import { Booking } from '../../types';
+import { setIdleCountdownListener, IdleCountdownState } from '../../hooks/useIdleLock';
+import { authService } from '../../services/auth.service';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -314,6 +316,26 @@ function NotificationBell({ notifications, unreadCount, markAllRead, clearAll }:
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  const [idleCountdown, setIdleCountdown] = React.useState<IdleCountdownState>({ active: false, secondsLeft: 0 });
+  const { logout } = useAuthStore();
+
+  // Subscribe to idle countdown changes from useIdleLock
+  React.useEffect(() => {
+    setIdleCountdownListener(setIdleCountdown);
+    return () => setIdleCountdownListener(null);
+  }, []);
+
+  const handleStayActive = () => {
+    // Any interaction resets timer in useIdleLock via DOM events; just dismiss visually
+    window.dispatchEvent(new MouseEvent('mousedown'));
+  };
+
+  const handleIdleLogout = async () => {
+    await authService.checkOut();
+    authService.logout();
+    logout();
+    window.location.href = '/login';
+  };
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -337,6 +359,35 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* ── Idle Logout Countdown Banner ─────────────────────────────── */}
+      {idleCountdown.active && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          background: 'linear-gradient(90deg,#DC2626,#B91C1C)',
+          color: 'white', padding: '12px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 4px 20px rgba(220,38,38,0.4)', fontFamily: 'system-ui,sans-serif',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Idle timeout — logging out in {idleCountdown.secondsLeft}s</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>15 minutes of no activity detected. Your session will be checked out automatically.</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleStayActive} style={{
+              background: 'white', color: '#DC2626', border: 'none', borderRadius: 8,
+              padding: '8px 18px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            }}>Stay Active</button>
+            <button onClick={handleIdleLogout} style={{
+              background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)',
+              borderRadius: 8, padding: '8px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer',
+            }}>Logout Now</button>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((p) => !p)} />
 
